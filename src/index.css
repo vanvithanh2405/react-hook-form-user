@@ -1,6 +1,15 @@
 @import "tailwindcss";
-
+@config "../tailwind.config";
 
 button {
   cursor: pointer;
+}
+
+
+[root] {
+  --primary-button: #fff
+}
+
+[theme="dark"] {
+  --primary-button: #f00
 }

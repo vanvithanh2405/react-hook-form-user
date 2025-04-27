@@ -4,7 +4,7 @@ export interface IOptionItem {
 }
 
 export interface IUser {
-  id: string,
+  id: number,
   full_name: string,
   email: string,
   address: {
@@ -12,5 +12,6 @@ export interface IUser {
   },
   city: string,
   country: string,
-  state: string
+  state: string,
+  billing: boolean
 }

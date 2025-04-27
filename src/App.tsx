@@ -8,39 +8,118 @@ import Table from "./components/Table"
 
 import { IUser } from "./type"
 import { toast } from "react-toastify"
+import CheckboxField from "./components/CheckboxField"
 
 interface IFormInput {
   full_name: string,
-  email: string
+  email: string,
+  address: string,
+  city: string,
+  country: string,
+  state: string,
+  billing: boolean
 }
 
 function App() {
   const [dataSource, setDataSource] = React.useState<IUser[] | null>(null);
+  const [userId, setUserId] = React.useState<number | null>(null);
   const { 
     control, 
     handleSubmit, 
+    reset,
+    setValue,
     formState: {
       errors
     }
   } = useForm({
     defaultValues: {
       full_name: "",
-      email: ""
+      email: "",
+      address: "",
+      city: "",
+      country: "",
+      state: "",
+      billing: false
     },
   })
 
-  const onSubmit: SubmitHandler<IFormInput> = (data) => {
-    const newItem = {
-      full_name: data.full_name,
-      email: data.email,
-      address: {
-        name: 'xxx'
+  const onSubmit: SubmitHandler<IFormInput> = async (data) => {
+    // mode: add
+    if (!userId) {
+      try {
+        const newItem = {
+          id: Date.now(),
+          full_name: data.full_name,
+          email: data.email,
+          address: {
+            name: data.address
+          },
+          city: data.city,
+          country: data.country,
+          state: data.state
+        }
+        const bodyData = {
+          data: {
+            avatar: 'https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/avatars/00/009d272e2b496aa0758a86a17eac5f7716a99133_full.jpg',
+            firstName: data.full_name,
+            lastName: data.full_name,
+            email: data.email,
+            role: 'operator',
+            password: '123456',
+          }
+        }
+        // call api to create new user
+        await fetch('https://tony-auth-express-vdee-6j0s-fhovok9bu.vercel.app/api/user/signup', {
+          method: 'POST',
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(bodyData)
+        });
+        const newDatasource = [...dataSource || [], newItem];
+        setDataSource(newDatasource as IUser[]);
+        reset();
+  
+        toast.success('Add Successfully', {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          theme: "light",
+        });
+      } catch (err) {
+        toast.error('Can not add new item', {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          theme: "light",
+        });
       }
-    }
-    const newDatasource = [...dataSource || [], newItem];
-    setDataSource(newDatasource as IUser[]);
+      
+      return;
+    } 
 
-    toast.success('Add Successfully', {
+    if (!dataSource) return;
+      
+    // mode: edit
+    const indexUser = dataSource.findIndex(item => item.id === userId);
+    
+    if (indexUser === -1 ) return;
+    dataSource[indexUser].full_name = data.full_name;
+    dataSource[indexUser].email = data.email;
+    dataSource[indexUser].address.name = data.address;
+    dataSource[indexUser].city = data.city;
+    dataSource[indexUser].country = data.country;
+    dataSource[indexUser].state = data.state;
+    dataSource[indexUser].billing = data.billing;
+
+    setDataSource(dataSource as IUser[]);
+    reset();
+
+    toast.success('Update Successfully', {
       position: "top-right",
       autoClose: 5000,
       hideProgressBar: false,
@@ -50,6 +129,65 @@ function App() {
     });
   }
 
+  function handleEdit(id: number) {
+    if (!dataSource) return;
+
+    setUserId(id);
+
+    const user = dataSource.find(item => item.id === id);
+    if (!user) return;
+
+    setValue('full_name', user.full_name)
+    setValue('email', user.email)
+    setValue('address', user.address.name)
+    setValue('city', user.city)
+    setValue('country', user.country)
+    setValue('state', user.state)
+    setValue('billing', user.billing)
+  }
+
+  async function handleDelete(id: number) {
+    if (!dataSource) return;
+
+    try {
+      const response = await fetch(`https://tony-auth-express-vdee-6j0s-fhovok9bu.vercel.app/api/user/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+
+      if (!data.isSucess) {
+        toast.error('Can not delete', {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          theme: "light",
+        });
+        return;
+      }
+      const newUsers = dataSource.filter(item => item.id !== id);
+      setDataSource(newUsers);
+      
+      toast.success('Delete Successfully', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        theme: "light",
+      });
+    } catch (err) {
+      toast.error('Can not delete', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        theme: "light",
+      });
+    }
+  }
   return (
     <div className="min-h-screen p-6 bg-gray-100 flex flex-col items-center justify-center">
       <div className="container max-w-screen-lg mx-auto">
@@ -122,54 +260,116 @@ function App() {
                       )}
                     </div>
                     <div className="md:col-span-3">
-                      <InputField 
-                        id="address"
-                        label="Address / Street"
+                      <Controller
+                        name="address"
+                        control={control}
+                        rules={
+                          {
+                            required: 'Please input field',
+                          }
+                        }
+                        render={({ field }) => (
+                          <InputField 
+                            id="address"
+                            label="Address / Street"
+                            {...field}
+                          />
+                        )}
                       />
+                      {errors && errors.address?.message && (
+                        <div className="text-red-500">{errors.address.message}</div>
+                      )}
                     </div>
                     <div className="md:col-span-2">
-                      <InputField 
-                        id="city"
-                        label="City"
+                      <Controller
+                        name="city"
+                        control={control}
+                        rules={
+                          {
+                            required: 'Please input field',
+                          }
+                        }
+                        render={({ field }) => (
+                          <InputField 
+                            id="city"
+                            label="City"
+                            {...field}
+                          />
+                        )}
                       />
+                      {errors && errors.city?.message && (
+                        <div className="text-red-500">{errors.city.message}</div>
+                      )}
                     </div>
                     <div className="md:col-span-3">
-                      <SelectField 
-                        id="countries"
-                        label="Country / region"
-                        options={
-                          [
-                            { label: 'United States', value: 'US' },
-                            { label: 'Canada', value: 'CA' },
-                            { label: 'Vietnam', value: 'VN' }
-                          ]
+                      <Controller
+                        name="country"
+                        control={control}
+                        rules={
+                          {
+                            required: 'Please input field',
+                          }
                         }
+                        render={({ field }) => (
+                          <SelectField 
+                            id="country"
+                            label="Country / region"
+                            options={
+                              [
+                                { label: 'United States', value: 'US' },
+                                { label: 'Canada', value: 'CA' },
+                                { label: 'Vietnam', value: 'VN' }
+                              ]
+                            }
+                            {...field}
+                          />
+                        )}
                       />
+                      {errors && errors.country?.message && (
+                        <div className="text-red-500">{errors.country.message}</div>
+                      )}
                     </div>
                     <div className="md:col-span-2">
-                      <SelectField 
-                        id="state"
-                        label="State/ provice"
-                        options={
-                          [
-                            { label: 'Phu Nhuan', value: 'Phu Nhuan' },
-                            { label: 'Q1', value: 'Q1' },
-                            { label: 'Q3', value: 'Q3' }
-                          ]
+                      <Controller
+                        name="state"
+                        control={control}
+                        rules={
+                          {
+                            required: 'Please input field',
+                          }
                         }
+                        render={({ field }) => (
+                          <SelectField 
+                            id="state"
+                            label="State/ provice"
+                            options={
+                              [
+                                { label: 'Phu Nhuan', value: 'Phu Nhuan' },
+                                { label: 'Q1', value: 'Q1' },
+                                { label: 'Q3', value: 'Q3' }
+                              ]
+                            }
+                            {...field}
+                          />
+                        )}
                       />
+                      {errors && errors.state?.message && (
+                        <div className="text-red-500">{errors.state.message}</div>
+                      )}
                     </div>
                     <div className="md:col-span-5">
-                      <div className="inline-flex items-center">
-                        <input
-                          type="checkbox"
-                          name="billing_same"
-                          id="billing_same"
-                          className="form-checkbox"
+                      <div className="">
+                        <Controller
+                          name="billing"
+                          control={control}
+                          render={({ field }) => (
+                            <CheckboxField 
+                              id="billing"
+                              label="My billing address is different than above."
+                              {...field}
+                            />
+                          )}
                         />
-                        <label htmlFor="billing_same" className="ml-2">
-                          My billing address is different than above.
-                        </label>
                       </div>
                     </div>
                     <div className="md:col-span-5 text-right">
@@ -188,7 +388,7 @@ function App() {
       </div>
       <div className="container max-w-screen-lg mx-auto w-full relative overflow-x-auto">
         <Table 
-          tableHeaders={['Full Name', 'Email Address', 'Address', 'City', 'Country', 'State']}
+          tableHeaders={['Full Name', 'Email Address', 'Address', 'City', 'Country', 'State', 'Action']}
           dataSource={dataSource || []}
           renderRow={(data: IUser) => {
             return (
@@ -204,6 +404,22 @@ function App() {
                 <td className="px-6 py-4">{data.city}</td>
                 <td className="px-6 py-4">{data.country}</td>
                 <td className="px-6 py-4">{data.state}</td>
+                <td className="px-6 py-4">
+                  <button 
+                    type="button" 
+                    className="underline cursor-pointer mr-2"
+                    onClick={() => handleEdit(data.id)}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    type="button" 
+                    className="underline cursor-pointer text-red-500"
+                    onClick={() => handleDelete(data.id)}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             )
           }}
@@ -214,21 +430,3 @@ function App() {
 }
 
 export default App
-
-
-/*
-users = [
-  { 
-    id: 1,
-    full_name: xxx,
-    last_name: xxx,
-    age: xxx,
-    dob: xxx,
-    city: xx,
-    addess: {
-      name: xxx,
-    },
-    email: xxx
-  }
-]
-*/
