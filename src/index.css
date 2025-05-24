@@ -13,3 +13,8 @@ button {
 [theme="dark"] {
   --primary-button: #f00
 }
+
+.disabled {
+  cursor: default;
+  opacity: 0.5;
+}

@@ -4,11 +4,11 @@ import { useForm, SubmitHandler, Controller } from "react-hook-form"
 
 import InputField from "./components/InputField"
 import SelectField from "./components/SelectField"
-import Table from "./components/Table"
 
 import { IUser } from "./type"
 import { toast } from "react-toastify"
 import CheckboxField from "./components/CheckboxField"
+import UserList from "./components/UserList"
 
 interface IFormInput {
   full_name: string,
@@ -20,9 +20,16 @@ interface IFormInput {
   billing: boolean
 }
 
+export interface IMetadata {
+  limit: number,
+  page: number,
+  total: number
+}
+
 function App() {
   const [dataSource, setDataSource] = React.useState<IUser[] | null>(null);
   const [userId, setUserId] = React.useState<number | null>(null);
+  const [metadata, setMetadata] = React.useState<IMetadata | null>(null)
   const { 
     control, 
     handleSubmit, 
@@ -41,7 +48,53 @@ function App() {
       state: "",
       billing: false
     },
-  })
+  });
+
+  // fetch user
+  React.useEffect(() => {
+    async function fetchUser() {
+      const res = await fetch('https://tony-auth-express-vdee-6j0s-fhovok9bu.vercel.app/api/user?page=1&limit=1000');
+      const data = await res.json();
+      const users = data.data.map((item: IUser) => {
+        return {
+          ...item,
+          full_name: item.email,
+          address: {
+            name: item.email,
+          },
+          city: 'hcm',
+          country: 'VN',
+          state: 'q1'
+        }
+      })
+      setDataSource(users);
+      setMetadata({
+        limit: data.limit,
+        page: data.page,
+        total: data.total
+      })
+    }
+    fetchUser();
+  }, [])
+
+  const onNextPage = () => {
+     console.log('onNextPage')
+    setMetadata(prevState => {
+      return {
+        ...prevState,
+        page: (prevState?.page || 0) + 1
+      }
+    })
+  }
+
+  const onPrevPage = () => {
+    setMetadata(prevState => {
+      return {
+        ...prevState,
+        page: (prevState?.page || 0) - 1
+      }
+    })
+  }
 
   const onSubmit: SubmitHandler<IFormInput> = async (data) => {
     // mode: add
@@ -188,6 +241,8 @@ function App() {
       });
     }
   }
+
+ 
   return (
     <div className="min-h-screen p-6 bg-gray-100 flex flex-col items-center justify-center">
       <div className="container max-w-screen-lg mx-auto">
@@ -387,42 +442,13 @@ function App() {
         </div>
       </div>
       <div className="container max-w-screen-lg mx-auto w-full relative overflow-x-auto">
-        <Table 
-          tableHeaders={['Full Name', 'Email Address', 'Address', 'City', 'Country', 'State', 'Action']}
+        <UserList 
           dataSource={dataSource || []}
-          renderRow={(data: IUser) => {
-            return (
-              <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 border-gray-200">
-                <th
-                  scope="row"
-                  className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                >
-                  {data.full_name}
-                </th>
-                <td className="px-6 py-4">{data.email}</td>
-                <td className="px-6 py-4">{data.address.name}</td>
-                <td className="px-6 py-4">{data.city}</td>
-                <td className="px-6 py-4">{data.country}</td>
-                <td className="px-6 py-4">{data.state}</td>
-                <td className="px-6 py-4">
-                  <button 
-                    type="button" 
-                    className="underline cursor-pointer mr-2"
-                    onClick={() => handleEdit(data.id)}
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    type="button" 
-                    className="underline cursor-pointer text-red-500"
-                    onClick={() => handleDelete(data.id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            )
-          }}
+          metadata={metadata}
+          handleDelete={handleDelete}
+          handleEdit={handleEdit}
+          onNextPage={onNextPage}
+          onPrevPage={onPrevPage}
         />
       </div>
     </div>
