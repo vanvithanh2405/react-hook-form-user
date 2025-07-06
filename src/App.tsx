@@ -11,13 +11,15 @@ import CheckboxField from "./components/CheckboxField"
 import UserList from "./components/UserList"
 
 interface IFormInput {
-  full_name: string,
+  first_name: string,
+  last_name: string,
   email: string,
   address: string,
   city: string,
   country: string,
   state: string,
-  billing: boolean
+  billing: boolean,
+  role: string
 }
 
 export interface IMetadata {
@@ -28,7 +30,7 @@ export interface IMetadata {
 
 function App() {
   const [dataSource, setDataSource] = React.useState<IUser[] | null>(null);
-  const [userId, setUserId] = React.useState<number | null>(null);
+  const [userId, setUserId] = React.useState<string | null>('');
   const [metadata, setMetadata] = React.useState<IMetadata | null>(null)
   const { 
     control, 
@@ -40,12 +42,14 @@ function App() {
     }
   } = useForm({
     defaultValues: {
-      full_name: "",
+      first_name: "",
+      last_name: "",
       email: "",
       address: "",
       city: "",
       country: "",
       state: "",
+      role: "",
       billing: false
     },
   });
@@ -53,18 +57,19 @@ function App() {
   // fetch user
   React.useEffect(() => {
     async function fetchUser() {
-      const res = await fetch('https://tony-auth-express-vdee-6j0s-fhovok9bu.vercel.app/api/user?page=1&limit=1000');
+      const res = await fetch('https://tony-auth-express-vdee.vercel.app/api/user?page=1&limit=1000');
       const data = await res.json();
       const users = data.data.map((item: IUser) => {
         return {
           ...item,
-          full_name: item.email,
-          address: {
-            name: item.email,
-          },
-          city: 'hcm',
-          country: 'VN',
-          state: 'q1'
+          first_name: item.first_name,
+          last_name: item.last_name,
+          address: item.address,
+          email: item.email,
+          city: item.city,
+          country: item.country,
+          state: item.state,
+          role: item.role,
         }
       })
       setDataSource(users);
@@ -102,27 +107,30 @@ function App() {
       try {
         const newItem = {
           id: Date.now(),
-          full_name: data.full_name,
+          first_name: data.first_name,
+          last_name: data.last_name,
           email: data.email,
-          address: {
-            name: data.address
-          },
+          address: data.address,
           city: data.city,
           country: data.country,
-          state: data.state
+          state: data.state,
+          role: data.role
         }
         const bodyData = {
           data: {
-            avatar: 'https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/avatars/00/009d272e2b496aa0758a86a17eac5f7716a99133_full.jpg',
-            firstName: data.full_name,
-            lastName: data.full_name,
+            first_name: data.first_name,
+            last_name: data.last_name,
             email: data.email,
-            role: 'operator',
+            role: data.email,
+            state: data.state,
+            country: data.country,
+            address: data.address,
+            city: data.city,
             password: '123456',
           }
         }
         // call api to create new user
-        await fetch('https://tony-auth-express-vdee-6j0s-fhovok9bu.vercel.app/api/user/signup', {
+        await fetch('https://tony-auth-express-vdee.vercel.app/api/user/signup', {
           method: 'POST',
           headers: {
             "Content-Type": "application/json"
@@ -161,12 +169,14 @@ function App() {
     const indexUser = dataSource.findIndex(item => item.id === userId);
     
     if (indexUser === -1 ) return;
-    dataSource[indexUser].full_name = data.full_name;
+    dataSource[indexUser].first_name = data.first_name;
+    dataSource[indexUser].last_name = data.last_name;
     dataSource[indexUser].email = data.email;
-    dataSource[indexUser].address.name = data.address;
+    dataSource[indexUser].address = data.address;
     dataSource[indexUser].city = data.city;
     dataSource[indexUser].country = data.country;
     dataSource[indexUser].state = data.state;
+    dataSource[indexUser].role = data.role;
     dataSource[indexUser].billing = data.billing;
 
     setDataSource(dataSource as IUser[]);
@@ -182,7 +192,7 @@ function App() {
     });
   }
 
-  function handleEdit(id: number) {
+  function handleEdit(id: string) {
     if (!dataSource) return;
 
     setUserId(id);
@@ -190,20 +200,22 @@ function App() {
     const user = dataSource.find(item => item.id === id);
     if (!user) return;
 
-    setValue('full_name', user.full_name)
+    setValue('first_name', user.first_name)
+    setValue('last_name', user.last_name)
     setValue('email', user.email)
-    setValue('address', user.address.name)
+    setValue('address', user.address)
     setValue('city', user.city)
     setValue('country', user.country)
     setValue('state', user.state)
+    setValue('role', user.role)
     setValue('billing', user.billing)
   }
 
-  async function handleDelete(id: number) {
+  async function handleDelete(id: string) {
     if (!dataSource) return;
 
     try {
-      const response = await fetch(`https://tony-auth-express-vdee-6j0s-fhovok9bu.vercel.app/api/user/${id}`, {
+      const response = await fetch(`https://tony-auth-express-vdee.vercel.app/api/user/${id}`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -219,7 +231,7 @@ function App() {
         });
         return;
       }
-      const newUsers = dataSource.filter(item => item.id !== id);
+      const newUsers = dataSource.filter(item => item._id !== id);
       setDataSource(newUsers);
       
       toast.success('Delete Successfully', {
@@ -260,9 +272,9 @@ function App() {
               <div className="lg:col-span-2">
                 <form onSubmit={handleSubmit(onSubmit)}>
                   <div className="grid gap-4 gap-y-2 text-sm grid-cols-1 md:grid-cols-5">
-                    <div className="md:col-span-5">
+                    <div className="md:col-span-3">
                       <Controller
-                        name="full_name"
+                        name="first_name"
                         control={control}
                         rules={
                           {
@@ -279,14 +291,43 @@ function App() {
                         }
                         render={({ field }) => (
                           <InputField 
-                            id="full_name"
-                            label="Full Name"
+                            id="first_name"
+                            label="First Name"
                             {...field}
                           />
                         )}
                       />
-                      {errors && errors.full_name?.message && (
-                        <div className="text-red-500">{errors.full_name.message}</div>
+                      {errors && errors.first_name?.message && (
+                        <div className="text-red-500">{errors.first_name.message}</div>
+                      )}
+                    </div>
+                    <div className="md:col-span-2">
+                      <Controller
+                        name="last_name"
+                        control={control}
+                        rules={
+                          {
+                            required: 'Please input field',
+                            maxLength: {
+                              value: 20,
+                              message: 'Please input value maxium 20'
+                            },
+                            minLength: {
+                              value: 6,
+                              message: 'Please input value minium 6'
+                            }
+                          }
+                        }
+                        render={({ field }) => (
+                          <InputField 
+                            id="last_name"
+                            label="Last Name"
+                            {...field}
+                          />
+                        )}
+                      />
+                      {errors && errors.last_name?.message && (
+                        <div className="text-red-500">{errors.last_name.message}</div>
                       )}
                     </div>
                     <div className="md:col-span-5">
@@ -412,6 +453,36 @@ function App() {
                         <div className="text-red-500">{errors.state.message}</div>
                       )}
                     </div>
+
+                    <div className="md:col-span-2">
+                      <Controller
+                        name="state"
+                        control={control}
+                        rules={
+                          {
+                            required: 'Please input field',
+                          }
+                        }
+                        render={({ field }) => (
+                          <SelectField 
+                            id="role"
+                            label="Role"
+                            options={
+                              [
+                                { label: 'Admin', value: 'admin' },
+                                { label: 'Operator', value: 'operator' },
+                                { label: 'Member', value: 'member' }
+                              ]
+                            }
+                            {...field}
+                          />
+                        )}
+                      />
+                      {errors && errors.role?.message && (
+                        <div className="text-red-500">{errors.role.message}</div>
+                      )}
+                    </div>
+
                     <div className="md:col-span-5">
                       <div className="">
                         <Controller

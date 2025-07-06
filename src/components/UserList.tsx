@@ -6,8 +6,8 @@ import clsx from 'clsx'
 interface UserListProps {
   dataSource: IUser[],
   metadata: IMetadata | null,
-  handleEdit: (id: number) => void,
-  handleDelete: (id: number) => void,
+  handleEdit: (id: string) => void,
+  handleDelete: (id: string) => void,
   onPrevPage: () => void,
   onNextPage: () => void
 }
@@ -20,6 +20,8 @@ function UserList({ dataSource, handleEdit, handleDelete, metadata, onPrevPage, 
   const lists = Array.from({ length: paginations }, (_, i) => i + 1);
 
   const users = dataSource.slice((page - 1) * LIMIT, page * LIMIT); // page: 1 -> .slice(0, 5); page: 2 -> .slice(5, 10), .slice(10, 20)
+
+  console.log('users: ', users)
 
   return (
     <>
@@ -39,10 +41,10 @@ function UserList({ dataSource, handleEdit, handleDelete, metadata, onPrevPage, 
                 scope="row"
                 className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
               >
-                {data.full_name}
+                {data.first_name}
               </th>
               <td className="px-6 py-4">{data.email}</td>
-              <td className="px-6 py-4">{data.address.name}</td>
+              <td className="px-6 py-4">{data.address}</td>
               <td className="px-6 py-4">{data.city}</td>
               <td className="px-6 py-4">{data.country}</td>
               <td className="px-6 py-4">{data.state}</td>
@@ -50,14 +52,14 @@ function UserList({ dataSource, handleEdit, handleDelete, metadata, onPrevPage, 
                 <button 
                   type="button" 
                   className="underline cursor-pointer mr-2"
-                  onClick={() => handleEdit(data.id)}
+                  onClick={() => handleEdit(data._id)}
                 >
                   Edit
                 </button>
                 <button 
                   type="button" 
                   className="underline cursor-pointer text-red-500"
-                  onClick={() => handleDelete(data.id)}
+                  onClick={() => handleDelete(data._id)}
                 >
                   Delete
                 </button>
